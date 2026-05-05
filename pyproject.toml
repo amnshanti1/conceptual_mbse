@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "conceptual-mbse"
+version = "0.1.0"
+description = "Conceptual fixed wing aircraft MBSE and low-fidelity analysis framework."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["mbse_core*", "domains*"]

@@ -136,6 +136,14 @@ These may become future capabilities, but the first version should focus on a tr
 | `docs/decisions/0002_module_interface_standard.md` | Decision record for typed module interfaces |
 | `docs/decisions/0003_initial_fidelity_strategy.md` | Decision record for low fidelity first |
 
+## Developer Commands
+
+Run the smoke tests from the repository root:
+
+```bash
+python3 -m unittest discover tests
+```
+
 ## Development Rule
 
 No aircraft analysis module should be considered complete unless it includes:
