@@ -2,7 +2,9 @@
 
 __all__ = [
     "aerodynamics",
+    "constraint_analysis",
     "geometry",
+    "initial_sizing",
     "mission",
     "performance",
     "propulsion",
