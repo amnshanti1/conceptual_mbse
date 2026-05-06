@@ -7,9 +7,8 @@ Current scope:
 - Typed input and output models.
 - Explicit MaCa-compatible unit names.
 - Basic input validation.
+- MaCa-compatible initial sizing calculation without file I/O or plotting.
 
 Not yet included:
 
-- Mission segment equations.
-- Takeoff weight convergence.
 - Plotting, GUI, CAD, or file I/O.
