@@ -9,9 +9,9 @@ Current scope:
 - Explicit MaCa-compatible unit names.
 - Basic input validation for wing loading vectors, thrust inputs, scenarios,
   curves, and envelopes.
+- MaCa-compatible constraint curve and envelope calculation without file I/O or
+  plotting.
 
 Not yet included:
 
-- Constraint equations.
-- Envelope selection logic.
 - Plotting, GUI, CAD, or file I/O.
