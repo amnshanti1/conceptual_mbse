@@ -10,27 +10,14 @@ from mbse_core.module_registry import ModuleEntry, get_registered_modules
 
 
 def render_ascii_module_graph(modules: Iterable[ModuleEntry] | None = None) -> str:
-    """Return a readable terminal view of modules and directed connections."""
+    """Return a node-style terminal view of modules and directed connections."""
 
     module_entries = tuple(modules) if modules is not None else get_registered_modules()
-    lines = ["Module Graph", "============", ""]
+    lines = ["Module Node Graph", "=================", ""]
 
     for module in module_entries:
-        downstream = ", ".join(module.downstream_modules) or "(none)"
-        lines.extend(
-            [
-                f"[{module.name}]",
-                f"  package: {module.package_path}",
-                f"  status: {module.status}",
-                f"  purpose: {module.purpose}",
-                "  inputs:",
-                *_bullet_lines(module.inputs, indent="    - "),
-                "  outputs:",
-                *_bullet_lines(module.outputs, indent="    - "),
-                f"  downstream: {downstream}",
-                "",
-            ]
-        )
+        lines.extend(_ascii_module_box(module))
+        lines.append("")
 
     lines.extend(["Connections", "-----------"])
     connection_lines = _connection_lines(module_entries)
@@ -39,7 +26,7 @@ def render_ascii_module_graph(modules: Iterable[ModuleEntry] | None = None) -> s
 
 
 def render_mermaid_module_graph(modules: Iterable[ModuleEntry] | None = None) -> str:
-    """Return a Markdown document containing the current module map."""
+    """Return a Markdown document containing the current node-style module map."""
 
     module_entries = tuple(modules) if modules is not None else get_registered_modules()
     lines = [
@@ -47,20 +34,24 @@ def render_mermaid_module_graph(modules: Iterable[ModuleEntry] | None = None) ->
         "",
         "Generated from `mbse_core.module_registry`.",
         "",
+        "## Mermaid Diagram",
+        "",
         "```mermaid",
         "flowchart LR",
     ]
 
     for module in module_entries:
-        label = _mermaid_label(module)
-        lines.append(f'    {module.name}["{label}"]')
+        lines.extend(_mermaid_module_node_lines(module))
 
     for module in module_entries:
         for downstream in module.downstream_modules:
-            lines.append(f"    {module.name} --> {downstream}")
+            lines.append(
+                f"    {module.name}_outputs -->|downstream| {downstream}_inputs"
+            )
 
     lines.extend(["```", ""])
     lines.extend(_module_detail_lines(module_entries))
+    lines.extend(_regeneration_lines())
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -113,6 +104,73 @@ def _bullet_lines(values: Iterable[str], indent: str) -> list[str]:
     return [f"{indent}{value}" for value in values]
 
 
+def _ascii_module_box(module: ModuleEntry) -> list[str]:
+    input_lines = [f"o {value}" for value in module.inputs]
+    body_lines = [
+        module.name,
+        f"package: {module.package_path}",
+        f"status: {module.status}",
+        f"purpose: {module.purpose}",
+    ]
+    output_lines = [f"o {value}" for value in module.outputs]
+
+    input_width = max(len("INPUTS"), *(len(line) for line in input_lines))
+    body_width = max(len("MODULE"), *(len(line) for line in body_lines))
+    output_width = max(len("OUTPUTS"), *(len(line) for line in output_lines))
+    total_width = input_width + body_width + output_width + 10
+    border = "+" + "-" * total_width + "+"
+    separator = (
+        "+"
+        + "-" * (input_width + 2)
+        + "+"
+        + "-" * (body_width + 2)
+        + "+"
+        + "-" * (output_width + 2)
+        + "+"
+    )
+
+    lines = [
+        border,
+        _ascii_row("INPUTS", "MODULE", "OUTPUTS", input_width, body_width, output_width),
+        separator,
+    ]
+    row_count = max(len(input_lines), len(body_lines), len(output_lines))
+    for index in range(row_count):
+        input_value = input_lines[index] if index < len(input_lines) else ""
+        body_value = body_lines[index] if index < len(body_lines) else ""
+        output_value = output_lines[index] if index < len(output_lines) else ""
+        lines.append(
+            _ascii_row(
+                input_value,
+                body_value,
+                output_value,
+                input_width,
+                body_width,
+                output_width,
+            )
+        )
+    lines.append(separator)
+
+    downstream = ", ".join(module.downstream_modules) or "(none)"
+    lines.append(f"downstream: {downstream}")
+    return lines
+
+
+def _ascii_row(
+    left: str,
+    center: str,
+    right: str,
+    left_width: int,
+    center_width: int,
+    right_width: int,
+) -> str:
+    return (
+        f"| {left:<{left_width}} "
+        f"| {center:<{center_width}} "
+        f"| {right:<{right_width}} |"
+    )
+
+
 def _connection_lines(modules: Iterable[ModuleEntry]) -> list[str]:
     lines: list[str] = []
     for module in modules:
@@ -121,17 +179,30 @@ def _connection_lines(modules: Iterable[ModuleEntry]) -> list[str]:
     return lines
 
 
-def _mermaid_label(module: ModuleEntry) -> str:
-    inputs = "<br/>".join(f"in: {value}" for value in module.inputs)
-    outputs = "<br/>".join(f"out: {value}" for value in module.outputs)
-    return "<br/>".join(
-        (
-            module.name,
-            module.status,
-            inputs,
-            outputs,
-        )
+def _mermaid_module_node_lines(module: ModuleEntry) -> list[str]:
+    lines = [
+        f'    subgraph {module.name}_node["{module.name}"]',
+        "        direction LR",
+    ]
+    lines.append(f'        {module.name}_inputs["Inputs"]')
+    for index, input_name in enumerate(module.inputs, start=1):
+        lines.append(f'        {module.name}_in_{index}["{input_name}"]')
+        lines.append(f"        {module.name}_in_{index} --> {module.name}_inputs")
+    lines.append(
+        f'        {module.name}_body["{module.name}<br/>{module.status}<br/>{module.package_path}"]'
     )
+    lines.append(f'        {module.name}_outputs["Outputs"]')
+    for index, output_name in enumerate(module.outputs, start=1):
+        lines.append(f'        {module.name}_out_{index}["{output_name}"]')
+        lines.append(f"        {module.name}_outputs --> {module.name}_out_{index}")
+    lines.extend(
+        [
+            f"        {module.name}_inputs --> {module.name}_body",
+            f"        {module.name}_body --> {module.name}_outputs",
+            "    end",
+        ]
+    )
+    return lines
 
 
 def _module_detail_lines(modules: Iterable[ModuleEntry]) -> list[str]:
@@ -152,6 +223,21 @@ def _module_detail_lines(modules: Iterable[ModuleEntry]) -> list[str]:
             ]
         )
     return lines
+
+
+def _regeneration_lines() -> list[str]:
+    return [
+        "## Regenerating This Diagram",
+        "",
+        "From the repository root, run:",
+        "",
+        "```bash",
+        "python3 scripts/generate_module_diagram.py",
+        "```",
+        "",
+        "The script reads `mbse_core.module_registry` as the source of truth and rewrites this Markdown file.",
+        "",
+    ]
 
 
 __all__ = [

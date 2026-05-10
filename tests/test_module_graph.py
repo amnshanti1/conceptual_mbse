@@ -14,19 +14,28 @@ class ModuleGraphTests(unittest.TestCase):
     def test_ascii_graph_includes_modules_and_connection(self) -> None:
         output = render_ascii_module_graph()
 
-        self.assertIn("[initial_sizing]", output)
-        self.assertIn("[constraint_analysis]", output)
+        self.assertIn("Module Node Graph", output)
+        self.assertIn("| INPUTS", output)
+        self.assertIn("| MODULE", output)
+        self.assertIn("| OUTPUTS", output)
+        self.assertIn("initial_sizing", output)
+        self.assertIn("constraint_analysis", output)
         self.assertIn("initial_sizing -> constraint_analysis", output)
-        self.assertIn("InitialSizingInputs", output)
-        self.assertIn("ConstraintAnalysisOutputs", output)
+        self.assertIn("o InitialSizingInputs", output)
+        self.assertIn("o ConstraintAnalysisOutputs", output)
 
-    def test_mermaid_graph_includes_flowchart_and_connection(self) -> None:
+    def test_mermaid_graph_includes_node_ports_and_connection(self) -> None:
         output = render_mermaid_module_graph()
 
         self.assertIn("```mermaid", output)
         self.assertIn("flowchart LR", output)
-        self.assertIn("initial_sizing --> constraint_analysis", output)
+        self.assertIn('subgraph initial_sizing_node["initial_sizing"]', output)
+        self.assertIn('initial_sizing_inputs["Inputs"]', output)
+        self.assertIn('initial_sizing_body["initial_sizing', output)
+        self.assertIn('initial_sizing_outputs["Outputs"]', output)
+        self.assertIn("initial_sizing_outputs -->|downstream| constraint_analysis_inputs", output)
         self.assertIn("## Registered Modules", output)
+        self.assertIn("## Regenerating This Diagram", output)
 
     def test_write_mermaid_graph_creates_parent_directory(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
